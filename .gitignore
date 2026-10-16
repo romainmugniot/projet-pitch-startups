@@ -1,0 +1,27 @@
+# Données : elles vivent sur le S3 du SSP Cloud, jamais dans le dépôt
+data/
+*.parquet
+*.csv
+*.json
+!.vscode/*.json
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Environnement et secrets
+.env
+
+# Éditeurs et OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
