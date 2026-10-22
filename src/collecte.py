@@ -6,7 +6,7 @@ Responsable : membre 1.
 import pandas as pd
 import requests
 
-from src.config import URL_YC 
+from src.config import URL_YC
 
 
 def telecharger_yc(url: str = URL_YC) -> pd.DataFrame:
@@ -28,7 +28,6 @@ def telecharger_yc(url: str = URL_YC) -> pd.DataFrame:
         raise ValueError(f"Colonnes absentes de l'API YC : {manquantes}")
 
     return startups
-
 
 
 def telecharger_launch_hn() -> pd.DataFrame:

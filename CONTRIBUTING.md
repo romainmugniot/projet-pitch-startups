@@ -46,6 +46,7 @@ nbstripout --install
 
 ```bash
 ruff check src tests
+ruff format --check src tests   # « ruff format src tests » corrige automatiquement
 pytest
 ```
 
