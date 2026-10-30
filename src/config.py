@@ -3,9 +3,10 @@
 import os
 
 # Bucket S3 du SSP Cloud où sont stockées les données (ex. "prenom-nom" ou "projet-pitch").
-S3_BUCKET = os.environ.get("PITCH_S3_BUCKET", "")
+S3_BUCKET = os.environ.get("PITCH_S3_BUCKET", "capucine")
 S3_ENDPOINT = "https://" + os.environ.get("AWS_S3_ENDPOINT", "minio.lab.sspcloud.fr")
-S3_PREFIX = f"{S3_BUCKET}/projet-pitch-startups"
+# Sous « diffusion/ », les fichiers sont lisibles par les autres utilisateurs du SSP Cloud.
+S3_PREFIX = f"{S3_BUCKET}/diffusion/projet-pitch-startups"
 
 CHEMIN_BRUT = f"{S3_PREFIX}/brut"
 CHEMIN_PROPRE = f"{S3_PREFIX}/propre"
