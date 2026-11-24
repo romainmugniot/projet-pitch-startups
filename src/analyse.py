@@ -8,6 +8,13 @@ from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (
+    average_precision_score,
+    balanced_accuracy_score,
+    confusion_matrix,
+    f1_score,
+    roc_auc_score,
+)
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, OneHotEncoder
 
@@ -123,6 +130,19 @@ def modele_texte(
     )
 
 
-def evaluer(modele, X_test, y_test) -> dict:
-    """AUC et matrice de confusion, en tenant compte du déséquilibre succès / échec."""
-    raise NotImplementedError
+def evaluer(modele: Pipeline, X_test: pd.DataFrame, y_test: pd.Series) -> dict:
+    """AUC, PR-AUC, balanced accuracy, F1 par classe et matrice de confusion.
+
+    Tient compte du déséquilibre succès / échec.
+    """
+    y_pred = modele.predict(X_test)
+    y_proba = modele.predict_proba(X_test)[:, 1]
+
+    return {
+        "roc_auc": float(roc_auc_score(y_test, y_proba)),
+        "pr_auc": float(average_precision_score(y_test, y_proba)),
+        "balanced_accuracy": float(balanced_accuracy_score(y_test, y_pred)),
+        "f1_echec": float(f1_score(y_test, y_pred, pos_label=0, zero_division=0)),
+        "f1_succes": float(f1_score(y_test, y_pred, pos_label=1, zero_division=0)),
+        "matrice_confusion": confusion_matrix(y_test, y_pred, labels=[0, 1]),
+    }
