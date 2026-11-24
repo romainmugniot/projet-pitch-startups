@@ -16,9 +16,35 @@ def reaction_hn_et_destin(df: pd.DataFrame) -> pd.DataFrame:
     raise NotImplementedError
 
 
-def decoupage_temporel(df: pd.DataFrame, promotions_test: list[str]) -> tuple:
-    """Entraînement sur les promotions anciennes, test sur les plus récentes."""
-    raise NotImplementedError
+def decoupage_temporel(
+    df: pd.DataFrame,
+    promotions_test: list[str],
+    cible: str = "succes",
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """Entraînement sur les promotions anciennes, test sur les plus récentes.
+
+    Si `cible` est absente de `df`, elle est construite depuis `statut` (1 si statut != "Inactive",
+    0 sinon). Renvoie `(X_train, X_test, y_train, y_test)`.
+    """
+    masque_test = df["promotion"].isin(promotions_test)
+    if masque_test.all() or (~masque_test).all():
+        raise ValueError(
+            "Le découpage temporel doit contenir au moins une observation en train et en test."
+        )
+
+    if cible in df.columns:
+        y = df[cible].astype(int)
+        X = df.drop(columns=[cible])
+    else:
+        y = (df["statut"] != "Inactive").astype(int)
+        X = df.copy()
+
+    return (
+        X.loc[~masque_test].reset_index(drop=True),
+        X.loc[masque_test].reset_index(drop=True),
+        y.loc[~masque_test].reset_index(drop=True),
+        y.loc[masque_test].reset_index(drop=True),
+    )
 
 
 def modele_reference():
