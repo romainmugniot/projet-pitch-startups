@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "ruff>=0.4", "nbstripout>=0.7"]
+dev = ["pytest>=8.0", "ruff>=0.4", "nbstripout>=0.7", "nbconvert>=7.0"]
 
 [build-system]
 requires = ["setuptools>=68"]

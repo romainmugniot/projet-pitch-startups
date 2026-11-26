@@ -5,6 +5,7 @@ import datetime
 import fsspec
 import pandas as pd
 import pytest
+from botocore.exceptions import NoCredentialsError
 
 from src import collecte
 
@@ -66,6 +67,19 @@ def test_charger_brut_repli_sur_l_api(monkeypatch):
     with pytest.warns(UserWarning, match="peuvent différer"):
         posts = collecte.charger_brut("hn")
     assert posts["points"].tolist() == [42]
+
+
+def test_charger_brut_repli_sans_identifiants(monkeypatch):
+    """Hors du SSP Cloud (CI GitHub, poste personnel), aucun identifiant S3 n'est défini."""
+
+    def lire_s3_sans_identifiants(nom, dossier, date):
+        raise NoCredentialsError()
+
+    monkeypatch.setattr(collecte, "lire_s3", lire_s3_sans_identifiants)
+    monkeypatch.setattr(collecte, "telecharger_yc", lambda: pd.DataFrame({"slug": ["neuve"]}))
+
+    with pytest.warns(UserWarning, match="NoCredentialsError"):
+        assert collecte.charger_brut("yc")["slug"].tolist() == ["neuve"]
 
 
 def test_charger_brut_collecte_demandee(monkeypatch):
