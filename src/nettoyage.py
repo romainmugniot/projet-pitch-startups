@@ -19,6 +19,10 @@ MOTIF_TITRE = re.compile(
 # Lettres utilisées par YC dans les titres. X et P désignent toutes deux la promotion de printemps.
 SAISONS = {"W": "Winter", "S": "Summer", "F": "Fall", "X": "Spring", "P": "Spring"}
 
+# Mois de début de chaque saison de promotion YC (Winter = janvier, Spring = avril, Summer = juin,
+# Fall = septembre).
+MOIS_DEBUT = {"Winter": 1, "Spring": 4, "Summer": 6, "Fall": 9}
+
 # Mots ajoutés ou retirés du nom selon la source (« Scanwell » / « Scanwell Health »).
 SUFFIXES = {"inc", "co", "ai", "io", "app", "labs", "hq", "technologies", "software", "health"}
 
@@ -66,6 +70,17 @@ def normaliser_nom(nom: str) -> str:
     return "".join(mots)
 
 
+def debut_promotion(promotion: str) -> pd.Timestamp:
+    """Date de début d'une promotion YC : « Winter 2020 » donne le 1er janvier 2020.
+
+    Renvoie NaT si la promotion ne suit pas le format « Saison AAAA » (« Unspecified »…).
+    """
+    morceaux = str(promotion).split()
+    if len(morceaux) != 2 or morceaux[0] not in MOIS_DEBUT or not morceaux[1].isdigit():
+        return pd.NaT
+    return pd.Timestamp(year=int(morceaux[1]), month=MOIS_DEBUT[morceaux[0]], day=1)
+
+
 def _grande_region(regions: list) -> str | None:
     """Première grande région (`REGIONS`) de la liste des régions YC, None s'il n'y en a pas."""
     return next((region for region in regions if region in REGIONS), None)
@@ -81,6 +96,9 @@ def joindre(yc: pd.DataFrame, hn: pd.DataFrame) -> pd.DataFrame:
     plus ancien, qui porte son pitch d'origine. Les posts sans promotion ne sont pas appariés,
     pour éviter de confondre deux startups homonymes. `niveau_succes` est laissé vide : il est
     calculé ensuite par `succes.niveau_succes`.
+
+    `hn_delai_ans` mesure, en années, le temps écoulé entre le début de la promotion et le post
+    Launch HN : un pitch publié longtemps après la promotion n'est plus vraiment celui d'origine.
     """
     posts = pd.concat(
         [hn, pd.DataFrame(hn["title"].map(extraire_titre).tolist(), index=hn.index)], axis=1
@@ -119,12 +137,16 @@ def joindre(yc: pd.DataFrame, hn: pd.DataFrame) -> pd.DataFrame:
             "secteur": apparies["industry"],
             "region": apparies["regions"].map(_grande_region),
             "taille_equipe": apparies["team_size"],
+            "stage": apparies["stage"],
+            "top_company": apparies["top_company"],
             "anciens_noms": apparies["former_names"],
             "hn_date": pd.to_datetime(apparies["created_at"]),
             "hn_points": apparies["points"],
             "hn_commentaires": apparies["num_comments"],
         }
     )
+    debut = table["promotion"].map(debut_promotion)
+    table["hn_delai_ans"] = (table["hn_date"].dt.tz_localize(None) - debut).dt.days / 365.25
     return table[COLONNES_TABLE_COMMUNE].reset_index(drop=True)
 
 

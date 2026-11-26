@@ -95,7 +95,8 @@ Le notebook importe les fonctions de `src/` au lieu d'accumuler de longues cellu
 Une ligne par startup :
 
 `slug`, `nom`, `promotion`, `pitch_origine`, `pitch_actuel`, `statut`, `niveau_succes`, `secteur`,
-`region`, `taille_equipe`, `anciens_noms`, `hn_date`, `hn_points`, `hn_commentaires`.
+`region`, `taille_equipe`, `stage`, `top_company`, `anciens_noms`, `hn_date`, `hn_points`,
+`hn_commentaires`, `hn_delai_ans` (années entre le début de la promotion et le post Launch HN).
 
 Le dictionnaire des variables se trouve en annexe du rapport.
 
