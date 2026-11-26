@@ -30,8 +30,11 @@ COLONNES_TABLE_COMMUNE = [
     "secteur",
     "region",
     "taille_equipe",
+    "stage",
+    "top_company",
     "anciens_noms",
     "hn_date",
     "hn_points",
     "hn_commentaires",
+    "hn_delai_ans",
 ]

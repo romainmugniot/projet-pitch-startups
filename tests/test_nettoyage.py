@@ -4,7 +4,13 @@ import pandas as pd
 import pytest
 
 from src.config import COLONNES_TABLE_COMMUNE
-from src.nettoyage import bilan_jointure, extraire_titre, joindre, normaliser_nom
+from src.nettoyage import (
+    bilan_jointure,
+    debut_promotion,
+    extraire_titre,
+    joindre,
+    normaliser_nom,
+)
 
 
 @pytest.mark.parametrize(
@@ -73,6 +79,8 @@ def yc():
             "regions": [["United States of America", "America / Canada"], ["Europe"]],
             "team_size": [12.0, 50.0],
             "former_names": [[], ["muzmatch"]],
+            "stage": ["Early", "Growth"],
+            "top_company": [False, True],
         }
     )
 
@@ -109,7 +117,28 @@ def test_joindre(yc, hn):
     assert table.loc["airgoat", "pitch_origine"] == "Kayak for travel agents"
     assert table.loc["muzz", "pitch_origine"] == "Matchmaking for Muslims"
     assert table.loc["airgoat", "region"] == "America / Canada"
+    assert table.loc["muzz", "stage"] == "Growth"
+    assert bool(table.loc["muzz", "top_company"])
+    # Post du 10 janvier 2020, promotion Winter 2020 commencée le 1er janvier : 9 jours.
+    assert table.loc["airgoat", "hn_delai_ans"] == pytest.approx(9 / 365.25)
     assert len(table) == 2
+
+
+@pytest.mark.parametrize(
+    "promotion, attendu",
+    [
+        ("Winter 2020", pd.Timestamp("2020-01-01")),
+        ("Spring 2025", pd.Timestamp("2025-04-01")),
+        ("Summer 2017", pd.Timestamp("2017-06-01")),
+        ("Fall 2024", pd.Timestamp("2024-09-01")),
+    ],
+)
+def test_debut_promotion(promotion, attendu):
+    assert debut_promotion(promotion) == attendu
+
+
+def test_debut_promotion_inconnue():
+    assert pd.isna(debut_promotion("Unspecified"))
 
 
 def test_bilan_jointure(yc, hn):
