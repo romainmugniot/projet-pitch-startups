@@ -17,3 +17,7 @@ jobs:
       - run: ruff check src tests
       - run: ruff format --check src tests
       - run: pytest
+      # Exécute le notebook de bout en bout : une cellule en erreur fait échouer la CI. Sans accès
+      # au S3 du SSP Cloud, charger_brut retélécharge les données depuis les API.
+      - name: Exécution du notebook
+        run: jupyter nbconvert --to notebook --execute rapport.ipynb --output /tmp/rapport-execute.ipynb

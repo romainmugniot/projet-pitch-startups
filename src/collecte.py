@@ -6,6 +6,7 @@ import warnings
 import pandas as pd
 import requests
 import s3fs
+from botocore.exceptions import BotoCoreError
 
 from src.config import CHEMIN_BRUT, DATE_COPIE, S3_ENDPOINT, URL_HN, URL_YC
 
@@ -130,7 +131,9 @@ def charger_brut(nom: str, collecter: bool = False) -> pd.DataFrame:
     else:
         try:
             return lire_s3(nom, CHEMIN_BRUT, DATE_COPIE)
-        except OSError as erreur:  # accès refusé, fichier absent, réseau coupé...
+        # Accès refusé, fichier absent, réseau coupé (OSError) ou identifiants S3 absents hors du
+        # SSP Cloud (BotoCoreError).
+        except (OSError, BotoCoreError) as erreur:
             raison = f"S3 illisible, {type(erreur).__name__} : {erreur}"
 
     warnings.warn(
