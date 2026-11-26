@@ -1,10 +1,18 @@
 """Tests unitaires pour le nettoyage des pitchs et les indicateurs textuels."""
 
+import nltk
 import numpy as np
 import pandas as pd
 import pytest
 
-from src.texte import indicateurs, mots_associes, nettoyer_pitch, score_jargon, similarite_pitchs
+from src.texte import (
+    indicateurs,
+    mots_associes,
+    nettoyer_pitch,
+    preparer_nltk,
+    score_jargon,
+    similarite_pitchs,
+)
 
 
 def test_nettoyer_pitch():
@@ -70,3 +78,14 @@ def test_similarite_pitchs():
     assert sim.iloc[0] == pytest.approx(2 / 3)
     assert sim.iloc[1] == 0.0
     assert np.isnan(sim.iloc[2])
+
+
+def test_preparer_nltk_echec_explicite(monkeypatch):
+    def introuvable(chemin):
+        raise LookupError(chemin)
+
+    monkeypatch.setattr(nltk.data, "find", introuvable)
+    monkeypatch.setattr(nltk, "download", lambda paquet, quiet: False)  # comme sans internet
+
+    with pytest.raises(RuntimeError, match="stopwords"):
+        preparer_nltk()

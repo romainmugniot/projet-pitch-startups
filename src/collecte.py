@@ -4,12 +4,13 @@ Responsable : membre 1.
 """
 
 import datetime
+import warnings
 
 import pandas as pd
 import requests
 import s3fs
 
-from src.config import S3_ENDPOINT, URL_HN, URL_YC
+from src.config import CHEMIN_BRUT, DATE_COPIE, S3_ENDPOINT, URL_HN, URL_YC
 
 COLONNES_HN = [
     "objectID",
@@ -114,3 +115,30 @@ def lire_s3(nom: str, dossier: str, date: str | None = None) -> pd.DataFrame:
 
     with s3.open(chemin, "rb") as fichier:
         return pd.read_parquet(fichier)
+
+
+def charger_brut(nom: str, collecter: bool = False) -> pd.DataFrame:
+    """Charge les données brutes `nom` (« yc » ou « hn ») analysées dans le rapport.
+
+    Lit la copie du `DATE_COPIE` sur le S3 du SSP Cloud. Si `collecter` vaut True, ou si cette
+    lecture échoue (par exemple hors du SSP Cloud, où le S3 refuse l'accès), télécharge les données
+    à jour depuis l'API correspondante et prévient que les chiffres peuvent différer du rapport.
+    """
+    telechargements = {"yc": telecharger_yc, "hn": telecharger_launch_hn}
+    if nom not in telechargements:
+        raise ValueError(f"Données brutes inconnues : « {nom} » (attendu : « yc » ou « hn »)")
+
+    if collecter:
+        raison = "collecte demandée"
+    else:
+        try:
+            return lire_s3(nom, CHEMIN_BRUT, DATE_COPIE)
+        except OSError as erreur:  # accès refusé, fichier absent, réseau coupé...
+            raison = f"S3 illisible, {type(erreur).__name__} : {erreur}"
+
+    warnings.warn(
+        f"Copie du {DATE_COPIE} de « {nom} » non utilisée ({raison}) : données téléchargées "
+        "depuis l'API, les chiffres peuvent différer de ceux du rapport.",
+        stacklevel=2,
+    )
+    return telechargements[nom]()

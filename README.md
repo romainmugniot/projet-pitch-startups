@@ -36,25 +36,36 @@ Deux API publiques et gratuites, **sans clé** : il n'y a aucun secret à gérer
 **Variable à prédire** : succès si la startup est active, rachetée ou en bourse ; échec si elle est inactive.
 
 Les données brutes et nettoyées ne sont **pas** dans le dépôt : des copies datées sont stockées sur le
-S3 du SSP Cloud, et le notebook repart de ces copies plutôt que des API en direct.
+stockage S3 du SSP Cloud, et le notebook repart de la copie du 30/10/2026 plutôt que des API en direct.
+Ces fichiers sont lisibles par tout utilisateur connecté du SSP Cloud :
+
+| Fichier | Contenu |
+|---|---|
+| `s3://capucine/diffusion/projet-pitch-startups/brut/yc/2026-10-30.parquet` | base Y Combinator brute (6 354 startups) |
+| `s3://capucine/diffusion/projet-pitch-startups/brut/hn/2026-10-30.parquet` | posts Launch HN bruts (1 159 posts) |
+| `s3://capucine/diffusion/projet-pitch-startups/propre/table_commune/2026-10-30.parquet` | table commune (853 startups) |
 
 ## Relancer le projet
 
-Sur un service VSCode ou Jupyter du [SSP Cloud](https://datalab.sspcloud.fr) :
+Le notebook se lance depuis un service VSCode ou Jupyter du [SSP Cloud](https://datalab.sspcloud.fr),
+là où sont les données :
 
 ```bash
-git clone https://github.com/<organisation>/projet-pitch-startups.git
+git clone https://github.com/romainmugniot/projet-pitch-startups.git
 cd projet-pitch-startups
 pip install -e .
 ```
 
 Puis ouvrir `rapport.ipynb` et exécuter toutes les cellules (*Run All*).
 
-Configuration (variables d'environnement, déjà définies sur le SSP Cloud sauf la première) :
+Hors du SSP Cloud, le stockage refuse l'accès : le notebook télécharge alors les données depuis les
+API, avec un avertissement, car les chiffres peuvent différer un peu de ceux du rapport.
+
+Configuration (variables d'environnement, déjà définies sur le SSP Cloud) :
 
 | Variable | Rôle | Défaut |
 |---|---|---|
-| `PITCH_S3_BUCKET` | Bucket S3 où sont lues et écrites les données | à renseigner |
+| `PITCH_S3_BUCKET` | Bucket S3 où sont lues et écrites les données | `capucine` |
 | `AWS_S3_ENDPOINT` | Endpoint S3 du SSP Cloud | `minio.lab.sspcloud.fr` |
 
 Pour reconstruire les données depuis les API (au lieu des copies S3), voir la section *Collecte* du notebook.

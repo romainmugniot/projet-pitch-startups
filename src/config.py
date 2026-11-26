@@ -11,6 +11,10 @@ S3_PREFIX = f"{S3_BUCKET}/diffusion/projet-pitch-startups"
 CHEMIN_BRUT = f"{S3_PREFIX}/brut"
 CHEMIN_PROPRE = f"{S3_PREFIX}/propre"
 
+# Copie des données analysée dans le rapport : le notebook lit toujours celle-ci, même si une
+# collecte plus récente est déposée à côté sur le S3.
+DATE_COPIE = "2026-10-30"
+
 URL_YC = "https://yc-oss.github.io/api/companies/all.json"
 URL_HN = "https://hn.algolia.com/api/v1/search_by_date"
 
