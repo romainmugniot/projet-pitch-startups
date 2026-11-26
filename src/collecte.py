@@ -1,7 +1,4 @@
-"""Collecte : appels aux API Y Combinator et Hacker News, sauvegarde et relecture sur S3.
-
-Responsable : membre 1.
-"""
+"""Collecte : appels aux API Y Combinator et Hacker News, sauvegarde et relecture sur S3."""
 
 import datetime
 import warnings

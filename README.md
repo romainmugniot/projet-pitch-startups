@@ -99,13 +99,7 @@ Une ligne par startup :
 
 Le dictionnaire des variables se trouve en annexe du rapport.
 
-## Répartition du travail
-
-| Membre | Rôle | Modules | Relit |
-|---|---|---|---|
-| Membre 1 | Données | `collecte.py`, `nettoyage.py`, README, `pyproject.toml` | Membre 2 |
-| Membre 2 | Texte et modélisation | `texte.py`, `analyse.py` (modèles) | Membre 3 |
-| Membre 3 | Succès, analyse et rapport | `succes.py`, `graphiques.py`, `rapport.ipynb` | Membre 1 |
+## Contribuer
 
 Règles de travail : voir [CONTRIBUTING.md](CONTRIBUTING.md).
 

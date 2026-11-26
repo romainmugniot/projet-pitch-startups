@@ -1,7 +1,4 @@
-"""Succès : construction de la variable à prédire.
-
-Responsable : membre 3.
-"""
+"""Succès : construction de la variable à prédire."""
 
 import pandas as pd
 

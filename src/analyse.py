@@ -1,7 +1,4 @@
-"""Analyse : statistiques descriptives et modèles.
-
-Responsables : membre 3 (statistiques), membre 2 (modèles).
-"""
+"""Analyse : statistiques descriptives et modèles."""
 
 import pandas as pd
 from sklearn.compose import ColumnTransformer

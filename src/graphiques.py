@@ -1,7 +1,4 @@
-"""Graphiques homogènes : titre, axes nommés, légende, mêmes couleurs partout.
-
-Responsable : membre 3.
-"""
+"""Graphiques homogènes : titre, axes nommés, légende, mêmes couleurs partout."""
 
 import pandas as pd
 
