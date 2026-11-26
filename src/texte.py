@@ -93,14 +93,33 @@ _FAUSSES_CIBLES = {
 }
 
 
-@lru_cache(maxsize=1)
-def _ressources_nlp() -> tuple[frozenset[str], WordNetLemmatizer]:
-    """Charge les stopwords anglais et le lemmatiseur WordNet (télécharge si absents)."""
-    for chemin, paquet in [("corpora/stopwords", "stopwords"), ("corpora/wordnet", "wordnet")]:
+# Ressources NLTK utilisées par le module : nom du paquet à télécharger -> chemin une fois installé.
+RESSOURCES_NLTK = {"stopwords": "corpora/stopwords", "wordnet": "corpora/wordnet"}
+
+
+def preparer_nltk() -> None:
+    """Télécharge les stopwords anglais et WordNet s'ils ne sont pas déjà installés.
+
+    À appeler une fois en début de notebook. Lève une `RuntimeError` qui dit quoi faire si un
+    téléchargement échoue (NLTK se contente sinon de renvoyer False, et l'erreur n'apparaît que
+    plus loin, au premier pitch nettoyé).
+    """
+    for paquet, chemin in RESSOURCES_NLTK.items():
         try:
             nltk.data.find(chemin)
         except LookupError:
-            nltk.download(paquet, quiet=True)
+            if not nltk.download(paquet, quiet=True):
+                raise RuntimeError(
+                    f"Téléchargement de la ressource NLTK « {paquet} » impossible. Vérifier la "
+                    "connexion à internet, ou l'installer à la main : python -m nltk.downloader "
+                    f"{paquet}"
+                ) from None
+
+
+@lru_cache(maxsize=1)
+def _ressources_nlp() -> tuple[frozenset[str], WordNetLemmatizer]:
+    """Charge les stopwords anglais et le lemmatiseur WordNet (télécharge si absents)."""
+    preparer_nltk()
     return frozenset(stopwords.words("english")), WordNetLemmatizer()
 
 

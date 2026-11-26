@@ -40,3 +40,37 @@ def test_lire_la_plus_recente_ou_une_date(s3_memoire):
 def test_lire_sans_copie(s3_memoire):
     with pytest.raises(FileNotFoundError):
         collecte.lire_s3("inconnu", "bucket/brut")
+
+
+def test_charger_brut_lit_la_copie_du_rapport(monkeypatch):
+    lectures = []
+
+    def lire_s3(nom, dossier, date):
+        lectures.append((nom, dossier, date))
+        return pd.DataFrame({"slug": ["acme"]})
+
+    monkeypatch.setattr(collecte, "lire_s3", lire_s3)
+    monkeypatch.setattr(collecte, "telecharger_yc", lambda: pytest.fail("API appelée"))
+
+    assert collecte.charger_brut("yc")["slug"].tolist() == ["acme"]
+    assert lectures == [("yc", collecte.CHEMIN_BRUT, collecte.DATE_COPIE)]
+
+
+def test_charger_brut_repli_sur_l_api(monkeypatch):
+    def lire_s3_refuse(nom, dossier, date):
+        raise PermissionError("Forbidden")
+
+    monkeypatch.setattr(collecte, "lire_s3", lire_s3_refuse)
+    monkeypatch.setattr(collecte, "telecharger_launch_hn", lambda: pd.DataFrame({"points": [42]}))
+
+    with pytest.warns(UserWarning, match="peuvent différer"):
+        posts = collecte.charger_brut("hn")
+    assert posts["points"].tolist() == [42]
+
+
+def test_charger_brut_collecte_demandee(monkeypatch):
+    monkeypatch.setattr(collecte, "lire_s3", lambda *args: pytest.fail("S3 lu"))
+    monkeypatch.setattr(collecte, "telecharger_yc", lambda: pd.DataFrame({"slug": ["neuve"]}))
+
+    with pytest.warns(UserWarning, match="collecte demandée"):
+        assert collecte.charger_brut("yc", collecter=True)["slug"].tolist() == ["neuve"]
