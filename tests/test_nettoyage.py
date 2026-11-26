@@ -7,6 +7,7 @@ from src.config import COLONNES_TABLE_COMMUNE
 from src.nettoyage import (
     bilan_jointure,
     debut_promotion,
+    echantillon_etude,
     extraire_titre,
     joindre,
     normaliser_nom,
@@ -147,3 +148,37 @@ def test_bilan_jointure(yc, hn):
     assert bilan.index.tolist() == ["Summer 2017", "Winter 2020", "inconnue"]
     assert bilan["posts"].tolist() == [1, 2, 1]
     assert bilan["appariements"].tolist() == [1, 1, 0]
+
+
+def test_echantillon_etude():
+    table = pd.DataFrame(
+        {
+            "slug": ["a", "b", "c", "d", "e"],
+            "promotion": ["Winter 2016", "Summer 2017", "Fall 2021", "Winter 2022", "Winter 2019"],
+            "statut": ["Inactive", "Inactive", "Active", "Inactive", "Acquired"],
+            "hn_delai_ans": [0.1, 0.2, 0.5, 0.1, 3.0],
+        }
+    )
+
+    echantillon, etapes = echantillon_etude(table)
+
+    # 2016 et 2022 sont hors période ; « e » a posté trois ans après sa promotion.
+    assert echantillon["slug"].tolist() == ["b", "c"]
+    assert etapes["startups"].tolist() == [5, 3, 2]
+    assert etapes["echecs"].tolist() == [3, 1, 1]
+    assert etapes["part_echecs"].iloc[-1] == 0.5
+
+
+def test_echantillon_etude_autres_bornes():
+    table = pd.DataFrame(
+        {
+            "promotion": ["Winter 2016", "Summer 2017"],
+            "statut": ["Inactive", "Active"],
+            "hn_delai_ans": [0.1, 1.5],
+        }
+    )
+
+    echantillon, etapes = echantillon_etude(table, debut=2016, fin=2017, delai_max=2.0)
+
+    assert len(echantillon) == 2
+    assert etapes.index[-1] == "Post Launch HN au plus 2 ans après la promotion"

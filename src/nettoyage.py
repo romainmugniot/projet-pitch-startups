@@ -180,3 +180,36 @@ def bilan_jointure(table: pd.DataFrame, hn: pd.DataFrame) -> pd.DataFrame:
             for p in index
         ]
     )
+
+
+def echantillon_etude(
+    table: pd.DataFrame, debut: int = 2017, fin: int = 2021, delai_max: float = 1.0
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Restreint la table commune à l'échantillon étudié et documente chaque filtre.
+
+    Garde les promotions des années `debut` à `fin` (incluses), dont les startups ont eu le temps
+    de réussir ou d'échouer, puis les posts Launch HN publiés au plus `delai_max` ans après le
+    début de la promotion, pour que le pitch soit bien celui des débuts.
+
+    Renvoie la table filtrée et un tableau des étapes : startups et échecs (statut « Inactive »)
+    restants après chaque filtre. Les seuils sont des paramètres pour pouvoir tester la
+    robustesse des résultats à d'autres bornes.
+    """
+    annee = table["promotion"].map(debut_promotion).dt.year
+    duree = f"{delai_max:g} an" + ("s" if delai_max >= 2 else "")
+    filtres = {
+        "Table commune": pd.Series(True, index=table.index),
+        f"Promotions {debut} à {fin}": annee.between(debut, fin),
+        f"Post Launch HN au plus {duree} après la promotion": table["hn_delai_ans"] <= delai_max,
+    }
+
+    garde = pd.Series(True, index=table.index)
+    etapes = []
+    for etape, filtre in filtres.items():
+        garde &= filtre
+        echecs = int((table.loc[garde, "statut"] == "Inactive").sum())
+        etapes.append({"etape": etape, "startups": int(garde.sum()), "echecs": echecs})
+
+    etapes = pd.DataFrame(etapes).set_index("etape")
+    etapes["part_echecs"] = etapes["echecs"] / etapes["startups"]
+    return table[garde].reset_index(drop=True), etapes
