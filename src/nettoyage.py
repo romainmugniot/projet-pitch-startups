@@ -1,7 +1,4 @@
-"""Nettoyage : extraction des titres Launch HN, harmonisation des noms, jointure avec la base YC.
-
-Responsable : membre 1.
-"""
+"""Nettoyage : extraction des titres Launch HN, harmonisation des noms, jointure avec la base YC."""
 
 import re
 

@@ -1,7 +1,7 @@
 """Texte : nettoyage des pitchs et indicateurs simples.
 
-Responsable : membre 2. Toutes les fonctions acceptent n'importe quelle colonne de pitchs
-(`pitch_actuel` ou `pitch_origine`).
+Toutes les fonctions acceptent n'importe quelle colonne de pitchs (`pitch_actuel` ou
+`pitch_origine`).
 """
 
 import re

@@ -12,4 +12,4 @@
 - [ ] Les fonctions ont une docstring
 - [ ] `ruff check src tests` et `pytest` passent
 - [ ] Aucune donnée ni sortie de notebook committée
-- [ ] Relecteur assigné (1 → 2, 2 → 3, 3 → 1)
+- [ ] Relecteur assigné
