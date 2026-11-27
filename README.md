@@ -83,7 +83,7 @@ projet-pitch-startups/
 │   ├── nettoyage.py   # regex, harmonisation des noms, jointure
 │   ├── succes.py      # niveaux de succès
 │   ├── texte.py       # nettoyage des pitchs, indicateurs, score de jargon
-│   ├── analyse.py     # statistiques et modèles
+│   ├── analyse.py     # taux d'échec et comparaisons
 │   └── graphiques.py  # fonctions de visualisation
 └── tests/             # tests des fonctions de nettoyage
 ```
