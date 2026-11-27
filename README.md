@@ -1,6 +1,6 @@
 # Peut-on prédire le succès d'une startup dès sa première phrase de pitch ?
 
-Projet du cours *Python pour la data science* (Lino Galiana), par Capucine, Gaspard et Romain.
+Projet du cours *Python pour la data science*, par Gaspard Rennesson, Capucine Roquefort et Romain Mugniot.
 
 **Lire le rapport en ligne, avec ses graphiques :**
 [rapport.ipynb sur nbviewer](https://nbviewer.org/github/romainmugniot/projet-pitch-startups/blob/main/rapport.ipynb)
