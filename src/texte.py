@@ -6,6 +6,7 @@ Toutes les fonctions acceptent n'importe quelle colonne de pitchs (`pitch_actuel
 
 import re
 from functools import lru_cache
+from statistics import NormalDist
 
 import nltk
 import numpy as np
@@ -69,11 +70,15 @@ _MOTIF_X_FOR_Y = re.compile(
 _MOTIF_FOR_CIBLE = re.compile(r"\bfor\s+([a-z][a-z\-]*)", re.IGNORECASE)
 _FAUSSES_CIBLES = {
     "a",
+    "ai",
     "all",
     "an",
     "any",
     "anyone",
     "better",
+    "building",
+    "data",
+    "every",
     "everyone",
     "fast",
     "faster",
@@ -89,8 +94,20 @@ _FAUSSES_CIBLES = {
     "the",
     "their",
     "this",
+    "web",
     "your",
 }
+
+# Jeton qui remplace le nom de la startup dans son pitch (`masquer_nom`). `nettoyer_pitch` l'écarte :
+# il ne doit compter ni comme un mot du pitch, ni comme un mot commun aux deux pitchs d'une startup.
+JETON_NOM = "xnomx"
+
+# Suffixes retirés du nom pour retrouver sa forme courte dans le pitch (« Axiom.ai » -> « Axiom »).
+_MOTIF_SUFFIXE_NOM = re.compile(r"[\s.,]+(?:inc|ai|io|hq|labs|app|co)\.?$", re.IGNORECASE)
+
+# Les mots de 3 lettres ou moins ne sont pas lemmatisés : ce sont surtout des sigles (ios, sms,
+# api), que WordNet prend pour des pluriels (« ios » devient « io », « sms » devient « sm »).
+LONGUEUR_MIN_LEMME = 4
 
 
 # Ressources NLTK utilisées par le module : nom du paquet à télécharger -> chemin une fois installé.
@@ -130,19 +147,40 @@ def _texte_propre_brut(pitch: object) -> str:
     return str(pitch).strip()
 
 
+def masquer_nom(pitch: str, nom: str) -> str:
+    """Remplace le nom de la startup par `JETON_NOM` dans son pitch, sans tenir compte de la casse.
+
+    Le nom n'est pas un mot du pitch : sans ce masquage, « Termius is an SSH client » ferait de
+    « termius » un mot associé au succès, et deux pitchs qui citent le même nom paraîtraient plus
+    proches qu'ils ne le sont. La forme courte du nom (« Axiom » pour « Axiom.ai ») est masquée
+    aussi. Un pitch ou un nom manquant renvoie le pitch inchangé (chaîne vide s'il manque).
+    """
+    texte = _texte_propre_brut(pitch)
+    nom = _texte_propre_brut(nom)
+    if not texte or not nom:
+        return texte
+    formes = sorted({nom, _MOTIF_SUFFIXE_NOM.sub("", nom)}, key=len, reverse=True)
+    motif = r"(?<![a-z0-9])(?:" + "|".join(re.escape(f) for f in formes if f) + r")(?![a-z0-9])"
+    return re.sub(motif, JETON_NOM, texte, flags=re.IGNORECASE)
+
+
 def nettoyer_pitch(pitch: str) -> str:
     """Minuscules, sans ponctuation ni mots vides anglais, lemmatisé.
 
-    Renvoie une chaîne vide si `pitch` est manquant ou vide.
+    Les mots sont les suites de lettres et de chiffres, pour garder « b2b » ou « 3d ». Seuls les
+    mots de plus de 3 lettres sont lemmatisés (`LONGUEUR_MIN_LEMME`), et le jeton de `masquer_nom`
+    est écarté. Renvoie une chaîne vide si `pitch` est manquant ou vide.
     """
     texte = _texte_propre_brut(pitch).lower()
     if not texte:
         return ""
 
     mots_vides, lemmatiseur = _ressources_nlp()
-    tokens = re.findall(r"[a-z]+", texte)
+    tokens = re.findall(r"[a-z0-9]+", texte)
     tokens_propres = [
-        lemmatiseur.lemmatize(mot) for mot in tokens if mot not in mots_vides and len(mot) > 1
+        lemmatiseur.lemmatize(mot) if len(mot) >= LONGUEUR_MIN_LEMME else mot
+        for mot in tokens
+        if mot not in mots_vides and len(mot) > 1 and mot != JETON_NOM
     ]
     return " ".join(tokens_propres)
 
@@ -195,9 +233,15 @@ def score_jargon(pitch: str) -> float:
 def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> pd.DataFrame:
     """Mots les plus associés au succès et à l'échec, en écartant ceux vus moins de `freq_min` fois.
 
-    `succes` doit être une série binaire (1 = succès, 0 = échec) alignée sur `pitchs`.
+    `succes` doit être une série binaire (1 = succès, 0 = échec) alignée sur `pitchs` : avec la
+    variable du rapport, passer `1 - succes.echec(df)`.
     Renvoie un DataFrame indexé par mot, trié par `log_odds_ratio` décroissant, avec les colonnes :
-    `frequence`, `nb_succes`, `nb_echec`, `taux_succes`, `ecart_taux`, `log_odds_ratio`.
+    `frequence`, `nb_succes`, `nb_echec`, `taux_succes`, `ecart_taux`, `log_odds_ratio`, `z`
+    (log-odds divisé par son erreur-type), `p_valeur` et `p_ajustee`.
+
+    Sur des centaines de mots, quelques-uns paraissent liés au succès par simple hasard : la
+    `p_ajustee` applique la correction de Benjamini-Hochberg (`_benjamini_hochberg`). Un mot dont
+    la `p_ajustee` est sous 0,05 reste associé au succès ou à l'échec une fois cette correction faite.
     """
     donnees = pd.DataFrame({"pitch": pitchs, "succes": succes}).dropna(subset=["succes"])
     y = donnees["succes"].astype(int)
@@ -226,6 +270,14 @@ def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> p
         # Log-odds ratio avec lissage de Laplace (+0.5) pour éviter les divisions par zéro.
         odds_succes = (nb_succes + 0.5) / (n_succes_total - nb_succes + 0.5)
         odds_echec = (nb_echec + 0.5) / (n_echec_total - nb_echec + 0.5)
+        log_odds = float(np.log(odds_succes / odds_echec))
+        # Erreur-type de Woolf : racine de la somme des inverses des quatre cases (lissées).
+        erreur_type = np.sqrt(
+            1 / (nb_succes + 0.5)
+            + 1 / (n_succes_total - nb_succes + 0.5)
+            + 1 / (nb_echec + 0.5)
+            + 1 / (n_echec_total - nb_echec + 0.5)
+        )
         lignes.append(
             {
                 "mot": mot,
@@ -234,7 +286,8 @@ def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> p
                 "nb_echec": nb_echec,
                 "taux_succes": taux_succes,
                 "ecart_taux": taux_succes - taux_global,
-                "log_odds_ratio": float(np.log(odds_succes / odds_echec)),
+                "log_odds_ratio": log_odds,
+                "z": log_odds / erreur_type,
             }
         )
 
@@ -245,15 +298,33 @@ def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> p
         "taux_succes",
         "ecart_taux",
         "log_odds_ratio",
+        "z",
+        "p_valeur",
+        "p_ajustee",
     ]
     if not lignes:
         return pd.DataFrame(columns=colonnes).rename_axis("mot")
 
-    return (
-        pd.DataFrame(lignes)
-        .set_index("mot")
-        .sort_values("log_odds_ratio", ascending=False)[colonnes]
-    )
+    resultat = pd.DataFrame(lignes).set_index("mot")
+    loi_normale = NormalDist()
+    resultat["p_valeur"] = [2 * (1 - loi_normale.cdf(abs(z))) for z in resultat["z"]]
+    resultat["p_ajustee"] = _benjamini_hochberg(resultat["p_valeur"].to_numpy())
+    return resultat.sort_values("log_odds_ratio", ascending=False)[colonnes]
+
+
+def _benjamini_hochberg(p_valeurs: np.ndarray) -> np.ndarray:
+    """p-valeurs ajustées de Benjamini-Hochberg, dans l'ordre des `p_valeurs` reçues.
+
+    La i-ème plus petite p-valeur sur m est multipliée par m / i, puis on garde le minimum cumulé
+    en partant de la plus grande, pour que l'ordre des p-valeurs soit respecté.
+    """
+    m = len(p_valeurs)
+    ordre = np.argsort(p_valeurs)
+    ajustees = p_valeurs[ordre] * m / np.arange(1, m + 1)
+    ajustees = np.minimum.accumulate(ajustees[::-1])[::-1]
+    resultat = np.empty(m)
+    resultat[ordre] = np.minimum(ajustees, 1.0)
+    return resultat
 
 
 def similarite_pitchs(pitch_origine: pd.Series, pitch_actuel: pd.Series) -> pd.Series:
