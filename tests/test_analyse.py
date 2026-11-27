@@ -97,6 +97,26 @@ def test_taux_echec_standardise_intervalle():
     assert ligne["ic_haut"] == pytest.approx(1.839, abs=2e-3)
 
 
+def test_taux_echec_standardise_par_promotion_et_secteur(deux_promotions):
+    ratios = taux_echec_standardise(
+        deux_promotions, "secteur", min_effectif=1, strates=("promotion", "secteur")
+    )
+
+    # Le secteur fait partie des strates : chaque secteur a autant d'échecs attendus qu'observés.
+    assert ratios["ratio"].tolist() == pytest.approx([1, 1])
+
+
+def test_ratios_par_indicateur_strates(deux_promotions):
+    # Cases promotion × secteur : A-X (2 échecs sur 2), A-Y (0 sur 2), B-X (0 sur 1), B-Y (1 sur 3).
+    startups = deux_promotions.assign(chiffre=[1, 0, 1, 0, 0, 1, 0, 0])
+
+    ratios = ratios_par_indicateur(startups, ["chiffre"], strates=("promotion", "secteur"))
+
+    # Startups avec chiffre : A-X (échec, attendu 1), A-Y (active, attendu 0), B-Y (active, 1/3).
+    assert ratios.loc["chiffre", "observes"] == 1
+    assert ratios.loc["chiffre", "attendus"] == pytest.approx(1 + 0 + 1 / 3)
+
+
 def test_ratios_par_indicateur(deux_promotions):
     startups = deux_promotions.assign(
         chiffre=[1, 1, 0, 0, 1, 0, 0, 0],  # 0/1 accepté comme booléen

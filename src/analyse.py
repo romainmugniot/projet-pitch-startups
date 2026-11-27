@@ -94,7 +94,9 @@ def taux_echec(df: pd.DataFrame, par: str, min_effectif: int = 10) -> pd.DataFra
     return _trier(resultat, "taux")
 
 
-def taux_echec_standardise(df: pd.DataFrame, par: str, min_effectif: int = 10) -> pd.DataFrame:
+def taux_echec_standardise(
+    df: pd.DataFrame, par: str, min_effectif: int = 10, strates: tuple[str, ...] = ("promotion",)
+) -> pd.DataFrame:
     """Échecs observés rapportés aux échecs attendus à promotion égale, par modalité de `par`.
 
     Une promotion récente a eu moins de temps pour échouer : comparer des taux bruts reviendrait
@@ -107,9 +109,15 @@ def taux_echec_standardise(df: pd.DataFrame, par: str, min_effectif: int = 10) -
     en supposant que le nombre d'échecs suit une loi de Poisson. Un ratio de 1,3 se lit
     « 30 % d'échecs de plus que leurs promotions », 0,8 « 20 % de moins » ; si l'intervalle
     contient 1, l'écart peut venir du hasard.
+
+    `strates` fixe les cases dont chaque startup reçoit le taux d'échec : la promotion par défaut.
+    Avec `strates=("promotion", "secteur")`, chaque startup reçoit le taux de sa case
+    promotion × secteur, et le ratio se lit « à promotion et secteur égaux ». Une case d'une
+    seule startup a autant d'échecs attendus qu'observés : elle n'apporte rien à la comparaison.
     """
     echecs = echec(df)
-    attendus = echecs.groupby(df["promotion"]).transform("mean")
+    cases = [df[strate].astype("object").fillna(NON_RENSEIGNE) for strate in strates]
+    attendus = echecs.groupby(cases).transform("mean")
     groupes = _modalites(df, par, min_effectif)
     resultat = (
         pd.DataFrame({"echec": echecs, "attendu": attendus})
@@ -123,18 +131,21 @@ def taux_echec_standardise(df: pd.DataFrame, par: str, min_effectif: int = 10) -
     return _trier(resultat, "ratio")
 
 
-def ratios_par_indicateur(df: pd.DataFrame, colonnes: list[str]) -> pd.DataFrame:
+def ratios_par_indicateur(
+    df: pd.DataFrame, colonnes: list[str], strates: tuple[str, ...] = ("promotion",)
+) -> pd.DataFrame:
     """Échecs observés / attendus à promotion égale pour chaque indicateur booléen de `colonnes`.
 
     Pour chaque colonne (« le pitch contient un chiffre »…), garde la ligne des startups pour
     lesquelles l'indicateur est vrai dans `taux_echec_standardise`, sans regrouper les petits
     effectifs : un indicateur rare garde sa ligne, avec un intervalle large. Une ligne par
-    indicateur, dans l'ordre de `colonnes` ; un indicateur jamais vrai est omis.
+    indicateur, dans l'ordre de `colonnes` ; un indicateur jamais vrai est omis. `strates` est
+    transmis à `taux_echec_standardise` (promotion × secteur pour comparer à secteur égal aussi).
     """
     lignes = {}
     for colonne in colonnes:
         resultat = taux_echec_standardise(
-            df.assign(**{colonne: df[colonne].astype(bool)}), colonne, 1
+            df.assign(**{colonne: df[colonne].astype(bool)}), colonne, 1, strates
         )
         if True in resultat.index:
             lignes[colonne] = resultat.loc[True]
