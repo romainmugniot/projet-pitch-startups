@@ -11,5 +11,5 @@
 - [ ] Les colonnes produites suivent la table commune (`src/config.py`)
 - [ ] Les fonctions ont une docstring
 - [ ] `ruff check src tests` et `pytest` passent
-- [ ] Aucune donnée ni sortie de notebook committée
+- [ ] Aucune donnée committée, ni sortie de notebook (sauf pour la version rendue)
 - [ ] Relecteur assigné

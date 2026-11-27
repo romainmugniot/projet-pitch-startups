@@ -31,6 +31,10 @@ pip install -e ".[dev]"
 nbstripout --install
 ```
 
+- Seule exception : la version rendue garde ses sorties, pour que le rapport se lise sur GitHub et
+  sur nbviewer sans être exécuté. On l'obtient par *Restart & Run All* sur le SSP Cloud, puis on la
+  committe sans passer par le filtre (`git -c filter.nbstripout.clean=cat add rapport.ipynb`).
+
 ## Code
 
 - Chaque fonction a une docstring qui dit ce qu'elle prend et ce qu'elle renvoie.
