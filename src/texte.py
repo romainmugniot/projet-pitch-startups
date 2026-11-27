@@ -214,6 +214,28 @@ def indicateurs(pitchs: pd.Series) -> pd.DataFrame:
     )
 
 
+def traits_pitch(pitchs: pd.Series, longueur_mediane: float | None = None) -> pd.DataFrame:
+    """Les cinq traits du pitch comparés à l'échec dans le rapport, en booléens.
+
+    `chiffre`, `client_nomme`, `x_for_y`, `jargon` (au moins un mot de `BUZZWORDS`) et `long`
+    (plus de `longueur_mediane` mots ; par défaut, la longueur médiane de `pitchs`). Fixer
+    `longueur_mediane` permet de garder le même seuil sur un autre échantillon.
+    """
+    mesures = indicateurs(pitchs)
+    if longueur_mediane is None:
+        longueur_mediane = mesures["nb_mots"].median()
+    return pd.DataFrame(
+        {
+            "chiffre": mesures["a_chiffre"],
+            "client_nomme": mesures["client_nomme"],
+            "x_for_y": mesures["tournure_x_for_y"],
+            "jargon": mesures["score_jargon"] > 0,
+            "long": mesures["nb_mots"] > longueur_mediane,
+        },
+        index=pitchs.index,
+    )
+
+
 def score_jargon(pitch: str) -> float:
     """Part des mots du pitch qui figurent dans `BUZZWORDS` (entre 0.0 et 1.0)."""
     texte = _texte_propre_brut(pitch).lower()
@@ -255,7 +277,9 @@ def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> p
     # Comptage par présence dans le document (chaque mot compte au plus une fois par startup).
     compteurs: dict[str, list[int]] = {}
     for texte, est_succes in zip(donnees["pitch"], y, strict=True):
-        mots_uniques = set(nettoyer_pitch(texte).split())
+        # Mots triés : l'ordre d'un set change d'une session Python à l'autre, et avec lui l'ordre
+        # des mots ex aequo dans le tableau final.
+        mots_uniques = sorted(set(nettoyer_pitch(texte).split()))
         for mot in mots_uniques:
             if mot not in compteurs:
                 compteurs[mot] = [0, 0]
@@ -309,7 +333,7 @@ def mots_associes(pitchs: pd.Series, succes: pd.Series, freq_min: int = 10) -> p
     loi_normale = NormalDist()
     resultat["p_valeur"] = [2 * (1 - loi_normale.cdf(abs(z))) for z in resultat["z"]]
     resultat["p_ajustee"] = _benjamini_hochberg(resultat["p_valeur"].to_numpy())
-    return resultat.sort_values("log_odds_ratio", ascending=False)[colonnes]
+    return resultat.sort_values("log_odds_ratio", ascending=False, kind="stable")[colonnes]
 
 
 def _benjamini_hochberg(p_valeurs: np.ndarray) -> np.ndarray:

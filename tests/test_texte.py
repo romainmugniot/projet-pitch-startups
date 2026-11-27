@@ -15,6 +15,7 @@ from src.texte import (
     preparer_nltk,
     score_jargon,
     similarite_pitchs,
+    traits_pitch,
 )
 
 
@@ -68,6 +69,27 @@ def test_indicateurs():
     assert bool(res.loc["b", "client_nomme"]) is True
     assert res.loc["b", "score_jargon"] > 0.0
     assert res.loc["c", "nb_mots"] == 0
+
+
+def test_traits_pitch():
+    pitchs = pd.Series(
+        ["The Uber for doctors in 24 hours", "AI-powered payroll for restaurants", "Payroll"]
+    )
+    res = traits_pitch(pitchs)
+    assert list(res.columns) == ["chiffre", "client_nomme", "x_for_y", "jargon", "long"]
+    assert res["chiffre"].tolist() == [True, False, False]
+    assert res["jargon"].tolist() == [False, True, False]
+    # Médiane de 7, 4 et 1 mots : 4 ; seul le premier pitch est plus long.
+    assert res["long"].tolist() == [True, False, False]
+    # Seuil fixé à la main : le même sur un autre échantillon.
+    assert traits_pitch(pitchs, longueur_mediane=0)["long"].tolist() == [True, True, True]
+
+
+def test_mots_associes_ordre_stable():
+    # Mots ex aequo : même ordre (alphabétique) quel que soit l'ordre d'itération des sets.
+    pitchs = pd.Series(["zeta alpha mike", "zeta alpha mike", "other words"])
+    res = mots_associes(pitchs, pd.Series([1, 1, 0]), freq_min=2)
+    assert list(res.index) == ["alpha", "mike", "zeta"]
 
 
 @pytest.mark.parametrize(
