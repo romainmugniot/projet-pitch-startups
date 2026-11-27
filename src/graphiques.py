@@ -165,6 +165,155 @@ def barres_taux(taux: pd.DataFrame, titre: str, source: str = SOURCE) -> go.Figu
     return _mise_en_forme(fig, titre, "Taux d'échec (startups inactives)", None, source)
 
 
-def mots_frequence_association(mots: pd.DataFrame):
-    """Nuage de points : fréquence d'un mot contre son association au succès."""
-    raise NotImplementedError
+def courbe_mots_par_annee(parts: pd.DataFrame, titre: str) -> go.Figure:
+    """Part des pitchs qui contiennent chaque mot, par année de promotion : une ligne par mot.
+
+    `parts` a une ligne par année (index) et une colonne par mot, avec des parts entre 0 et 1.
+    """
+    donnees = (
+        parts.rename_axis("annee").reset_index().melt("annee", var_name="mot", value_name="part")
+    )
+    fig = px.line(
+        donnees,
+        x="annee",
+        y="part",
+        color="mot",
+        markers=True,
+        color_discrete_sequence=[
+            COULEURS["succes"],
+            COULEURS["echec"],
+            "#d9a400",
+            COULEURS["neutre"],
+        ],
+    )
+    fig.update_traces(
+        line_width=2,
+        marker_size=7,
+        hovertemplate="« %{fullData.name} » : %{y:.0%} des pitchs des promotions %{x}<extra></extra>",
+    )
+    fig.update_yaxes(tickformat=".0%", rangemode="tozero")
+    fig.update_xaxes(dtick=1)
+    fig.update_layout(
+        legend={"title": None, "orientation": "h", "x": 0, "y": 1, "yanchor": "bottom"}
+    )
+    return _mise_en_forme(
+        fig, titre, "Année de la promotion", "Part des pitchs qui contiennent le mot"
+    )
+
+
+def points_ratios(ratios: pd.DataFrame, titre: str, source: str = SOURCE) -> go.Figure:
+    """Ratios échecs observés / attendus avec leur intervalle à 95 %, un point par ligne.
+
+    `ratios` est indexé par l'étiquette à afficher et a les colonnes `effectif`, `observes`,
+    `attendus`, `ratio`, `ic_bas` et `ic_haut` (`analyse.ratios_par_indicateur`,
+    `analyse.taux_echec_standardise`). L'axe est logarithmique pour qu'un ratio de 2 et un ratio
+    de 0,5 soient à la même distance de la ligne verticale à 1 (« autant d'échecs qu'attendu »).
+    Un intervalle qui coupe cette ligne signale un écart compatible avec le hasard.
+    """
+    donnees = ratios.reset_index()
+    etiquette = donnees.columns[0]
+    donnees["etiquette"] = (
+        donnees[etiquette].astype(str) + " (" + donnees["effectif"].astype(str) + ")"
+    )
+    donnees["erreur_haut"] = donnees["ic_haut"] - donnees["ratio"]
+    donnees["erreur_bas"] = donnees["ratio"] - donnees["ic_bas"]
+
+    fig = px.scatter(
+        donnees,
+        x="ratio",
+        y="etiquette",
+        error_x="erreur_haut",
+        error_x_minus="erreur_bas",
+        log_x=True,
+        custom_data=["observes", "attendus", "ic_bas", "ic_haut"],
+        color_discrete_sequence=[COULEURS["echec"]],
+    )
+    fig.update_traces(
+        marker_size=10,
+        error_x={"color": COULEURS["neutre"], "thickness": 1.5, "width": 4},
+        hovertemplate=(
+            "%{y} : %{customdata[0]} échecs pour %{customdata[1]:.1f} attendus "
+            "(ratio %{x:.2f})<br>Intervalle à 95 % : %{customdata[2]:.2f} à %{customdata[3]:.2f}"
+            "<extra></extra>"
+        ),
+    )
+    fig.add_vline(
+        x=1,
+        line_width=1,
+        line_color=COULEURS["neutre"],
+        annotation_text="Autant d'échecs qu'attendu",
+        annotation_position="top",
+        annotation_font_color=COULEURS["neutre"],
+    )
+    fig.update_yaxes(categoryorder="array", categoryarray=donnees["etiquette"].tolist()[::-1])
+    # Graduations lisibles sur l'axe logarithmique, symétriques autour de 1.
+    graduations = [0.125, 0.25, 0.5, 1, 2, 4, 8]
+    fig.update_xaxes(tickvals=graduations, ticktext=["1/8", "1/4", "1/2", "1", "2", "4", "8"])
+    fig.update_layout(height=160 + 45 * len(donnees))
+    return _mise_en_forme(
+        fig, titre, "Échecs observés / attendus à promotion égale (échelle log)", None, source
+    )
+
+
+def mots_frequence_association(
+    mots: pd.DataFrame, titre: str, seuil: float = 0.05, nb_etiquettes: int = 10
+) -> go.Figure:
+    """Nuage de points : fréquence d'un mot contre son association au succès.
+
+    `mots` est le tableau de `texte.mots_associes`. En ordonnée, le log-odds ratio : au-dessus de 0,
+    le mot est plus fréquent chez les startups qui n'ont pas échoué. Les mots dont la `p_ajustee`
+    est sous `seuil` sont colorés (bleu côté succès, rouge côté échec), les autres restent gris ;
+    les `nb_etiquettes` mots les plus nettement associés (plus grand |z|) sont nommés. Plusieurs mots
+    vus dans les mêmes pitchs tombent sur le même point : ils sont nommés ensemble
+    (« tool, find »).
+    """
+    donnees = mots.reset_index()
+    significatif = donnees["p_ajustee"] < seuil
+    donnees["groupe"] = "Non significatif après correction"
+    donnees.loc[significatif & (donnees["log_odds_ratio"] > 0), "groupe"] = "Associé au succès"
+    donnees.loc[significatif & (donnees["log_odds_ratio"] < 0), "groupe"] = "Associé à l'échec"
+    nommes = donnees["mot"].isin(
+        donnees.loc[donnees["z"].abs().nlargest(nb_etiquettes).index, "mot"]
+    )
+    position = ["frequence", "nb_succes", "nb_echec"]
+    noms = donnees[nommes].groupby(position)["mot"].agg(", ".join).rename("etiquette")
+    tous = donnees.groupby(position)["mot"].agg(", ".join).rename("mots_point")
+    donnees = (
+        donnees.drop_duplicates(subset=position + ["groupe"])
+        .merge(noms, on=position, how="left")
+        .merge(tous, on=position)
+    )
+    donnees["etiquette"] = donnees["etiquette"].fillna("")
+
+    fig = px.scatter(
+        donnees,
+        x="frequence",
+        y="log_odds_ratio",
+        color="groupe",
+        text="etiquette",
+        custom_data=["mots_point", "nb_succes", "nb_echec", "p_ajustee"],
+        color_discrete_map={
+            "Non significatif après correction": COULEURS["neutre"],
+            "Associé au succès": COULEURS["succes"],
+            "Associé à l'échec": COULEURS["echec"],
+        },
+    )
+    fig.update_traces(
+        marker={"size": 9, "opacity": 0.8},
+        textposition="top center",
+        textfont={"size": 11, "color": "#191919"},
+        hovertemplate=(
+            "« %{customdata[0]} » : %{customdata[1]} startups sans échec, %{customdata[2]} échecs"
+            "<br>Log-odds : %{y:.2f} ; p ajustée : %{customdata[3]:.2f}<extra></extra>"
+        ),
+    )
+    fig.add_hline(y=0, line_width=1, line_color=COULEURS["neutre"])
+    fig.update_layout(
+        legend={"title": None, "orientation": "h", "x": 0, "y": 1, "yanchor": "bottom"}
+    )
+    return _mise_en_forme(
+        fig,
+        titre,
+        "Nombre de pitchs qui contiennent le mot",
+        "Log-odds ratio (> 0 : côté succès)",
+    )

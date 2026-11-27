@@ -8,6 +8,7 @@ from src.analyse import (
     evaluer,
     modele_reference,
     modele_texte,
+    ratios_par_indicateur,
     taux_echec,
     taux_echec_standardise,
 )
@@ -93,6 +94,22 @@ def test_taux_echec_standardise_intervalle():
     assert ligne["ratio"] == pytest.approx(1)
     assert ligne["ic_bas"] == pytest.approx(0.480, abs=2e-3)
     assert ligne["ic_haut"] == pytest.approx(1.839, abs=2e-3)
+
+
+def test_ratios_par_indicateur(deux_promotions):
+    startups = deux_promotions.assign(
+        chiffre=[1, 1, 0, 0, 1, 0, 0, 0],  # 0/1 accepté comme booléen
+        jamais=False,
+    )
+
+    ratios = ratios_par_indicateur(startups, ["chiffre", "jamais"])
+
+    # Indicateur vrai pour 3 startups (2 de A, 1 de B) : 2 échecs pour 0,5 + 0,5 + 0,25 attendus.
+    # « jamais » n'est vrai pour personne : pas de ligne.
+    assert ratios.index.tolist() == ["chiffre"]
+    assert ratios.loc["chiffre", "effectif"] == 3
+    assert ratios.loc["chiffre", "observes"] == 2
+    assert ratios.loc["chiffre", "ratio"] == pytest.approx(2 / 1.25)
 
 
 @pytest.fixture
