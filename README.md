@@ -22,7 +22,7 @@ Sous-questions :
 
 1. Quels mots, tournures (« the X for Y », « AI-powered ») ou caractéristiques (longueur, jargon)
    sont associés aux succès et aux échecs ?
-2. Le signal tient-il une fois contrôlés le secteur, la promotion et la région ?
+2. Le signal tient-il une fois pris en compte le secteur et la promotion ?
 3. Les pitchs qui ont fait réagir Hacker News au lancement appartiennent-ils aux startups qui ont réussi ?
 
 ## Résultat en bref
@@ -131,4 +131,6 @@ Détaillées dans la conclusion du rapport :
 - **Contrôles mesurés aujourd'hui** : le secteur et la région sont ceux de la base YC actuelle.
 - **Puissance** : les traits rares (chiffre, « X for Y », mots à la mode) concernent une dizaine
   de startups chacun et ne peuvent être ni confirmés ni écartés.
+- **Mesure** : les traits du pitch sont repérés par des règles simples (listes de marques et de mots,
+  mot qui suit « for ») qui laissent passer des faux positifs ; cette imprécision rapproche les écarts de 1.
 - **Corrélation et non causalité**, **API YC non officielle** (yc-oss).
