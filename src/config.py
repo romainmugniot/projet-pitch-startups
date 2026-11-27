@@ -9,7 +9,6 @@ S3_ENDPOINT = "https://" + os.environ.get("AWS_S3_ENDPOINT", "minio.lab.sspcloud
 S3_PREFIX = f"{S3_BUCKET}/diffusion/projet-pitch-startups"
 
 CHEMIN_BRUT = f"{S3_PREFIX}/brut"
-CHEMIN_PROPRE = f"{S3_PREFIX}/propre"
 
 # Copie des données analysée dans le rapport : le notebook lit toujours celle-ci, même si une
 # collecte plus récente est déposée à côté sur le S3.

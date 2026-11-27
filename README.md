@@ -59,7 +59,9 @@ Ces fichiers sont lisibles par tout utilisateur connecté du SSP Cloud :
 |---|---|
 | `s3://capucine/diffusion/projet-pitch-startups/brut/yc/2026-10-30.parquet` | base Y Combinator brute (6 354 startups) |
 | `s3://capucine/diffusion/projet-pitch-startups/brut/hn/2026-10-30.parquet` | posts Launch HN bruts (1 159 posts) |
-| `s3://capucine/diffusion/projet-pitch-startups/propre/table_commune/2026-10-30.parquet` | table commune (853 startups) |
+
+La table commune (853 startups appariées) est reconstruite à partir de ces deux fichiers à chaque
+exécution du notebook.
 
 ## Relancer le projet
 
