@@ -201,7 +201,12 @@ def courbe_mots_par_annee(parts: pd.DataFrame, titre: str) -> go.Figure:
     )
 
 
-def points_ratios(ratios: pd.DataFrame, titre: str, source: str = SOURCE) -> go.Figure:
+def points_ratios(
+    ratios: pd.DataFrame,
+    titre: str,
+    source: str = SOURCE,
+    axe_x: str = "Échecs observés / attendus à promotion égale (échelle log)",
+) -> go.Figure:
     """Ratios échecs observés / attendus avec leur intervalle à 95 %, un point par ligne.
 
     `ratios` est indexé par l'étiquette à afficher et a les colonnes `effectif`, `observes`,
@@ -209,6 +214,10 @@ def points_ratios(ratios: pd.DataFrame, titre: str, source: str = SOURCE) -> go.
     `analyse.taux_echec_standardise`). L'axe est logarithmique pour qu'un ratio de 2 et un ratio
     de 0,5 soient à la même distance de la ligne verticale à 1 (« autant d'échecs qu'attendu »).
     Un intervalle qui coupe cette ligne signale un écart compatible avec le hasard.
+
+    Si `ratios` a une colonne `comparaison` (« À promotion égale », « À promotion et secteur
+    égaux »), chaque étiquette porte un point par comparaison, côte à côte et de couleurs
+    différentes : on voit si le ratio revient vers 1 quand on ajoute le secteur.
     """
     donnees = ratios.reset_index()
     etiquette = donnees.columns[0]
@@ -225,8 +234,9 @@ def points_ratios(ratios: pd.DataFrame, titre: str, source: str = SOURCE) -> go.
         error_x="erreur_haut",
         error_x_minus="erreur_bas",
         log_x=True,
+        color="comparaison" if "comparaison" in donnees else None,
         custom_data=["observes", "attendus", "ic_bas", "ic_haut"],
-        color_discrete_sequence=[COULEURS["echec"]],
+        color_discrete_sequence=[COULEURS["echec"], COULEURS["succes"]],
     )
     fig.update_traces(
         marker_size=10,
@@ -245,14 +255,18 @@ def points_ratios(ratios: pd.DataFrame, titre: str, source: str = SOURCE) -> go.
         annotation_position="top",
         annotation_font_color=COULEURS["neutre"],
     )
-    fig.update_yaxes(categoryorder="array", categoryarray=donnees["etiquette"].tolist()[::-1])
+    fig.update_yaxes(
+        categoryorder="array", categoryarray=donnees["etiquette"].drop_duplicates().tolist()[::-1]
+    )
     # Graduations lisibles sur l'axe logarithmique, symétriques autour de 1.
     graduations = [0.125, 0.25, 0.5, 1, 2, 4, 8]
     fig.update_xaxes(tickvals=graduations, ticktext=["1/8", "1/4", "1/2", "1", "2", "4", "8"])
-    fig.update_layout(height=160 + 45 * len(donnees))
-    return _mise_en_forme(
-        fig, titre, "Échecs observés / attendus à promotion égale (échelle log)", None, source
+    fig.update_layout(
+        height=160 + 45 * len(donnees),
+        scattermode="group",
+        legend={"title": None, "orientation": "h", "x": 0, "y": 1, "yanchor": "bottom"},
     )
+    return _mise_en_forme(fig, titre, axe_x, None, source)
 
 
 def mots_frequence_association(

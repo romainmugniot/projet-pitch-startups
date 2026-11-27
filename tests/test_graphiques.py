@@ -151,3 +151,29 @@ def test_mots_frequence_association_mots_au_meme_point():
     points = fig.data[0]
     assert len(points.x) == 2
     assert points.text.tolist() == ["tool, find", ""]
+
+
+def test_points_ratios_deux_comparaisons():
+    ratios = pd.DataFrame(
+        {
+            "effectif": [8, 8],
+            "observes": [4, 4],
+            "attendus": [1.7, 3.0],
+            "ratio": [2.4, 1.36],
+            "ic_bas": [0.6, 0.4],
+            "ic_haut": [6.1, 3.5],
+            "comparaison": ["À promotion égale", "À promotion et secteur égaux"],
+        },
+        index=pd.Index(["Tournure « X for Y »"] * 2, name="indicateur"),
+    )
+
+    fig = points_ratios(ratios, "Le secteur explique une partie de l'écart")
+
+    # Une série par comparaison, sur la même étiquette, côte à côte.
+    assert [trace.name for trace in fig.data] == [
+        "À promotion égale",
+        "À promotion et secteur égaux",
+    ]
+    assert fig.data[1].x.tolist() == pytest.approx([1.36])
+    assert fig.layout.yaxis.categoryarray == ("Tournure « X for Y » (8)",)
+    assert fig.layout.scattermode == "group"
