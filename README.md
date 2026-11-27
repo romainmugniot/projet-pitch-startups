@@ -94,7 +94,6 @@ Pour repartir des API plutôt que de la copie S3, mettre `COLLECTER = True` dans
 ```
 projet-pitch-startups/
 ├── README.md          # question, sources, comment tout relancer
-├── CONTRIBUTING.md    # règles de travail (branches, relecture, notebook)
 ├── pyproject.toml     # dépendances (installation en une commande)
 ├── rapport.ipynb      # le rapport final, court et commenté
 ├── src/
@@ -120,10 +119,6 @@ Une ligne par startup :
 `hn_commentaires`, `hn_delai_ans` (années entre le début de la promotion et le post Launch HN).
 
 Leur description est dans `src/config.py` (`DICTIONNAIRE_VARIABLES`) et en annexe A du rapport.
-
-## Contribuer
-
-Règles de travail : voir [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Limites
 
