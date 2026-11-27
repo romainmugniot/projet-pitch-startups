@@ -7,6 +7,7 @@ from src.analyse import taux_echec
 from src.graphiques import (
     SOURCE,
     barres_taux,
+    boites_reaction,
     courbe_mots_par_annee,
     courbe_recul,
     mots_frequence_association,
@@ -116,6 +117,19 @@ def test_mots_frequence_association():
     assert groupes["Associé à l'échec"].customdata[0][0] == "crypto"
     # Seuls les deux mots au plus grand |z| sont nommés.
     assert groupes["Non significatif après correction"].text.tolist() == [""]
+
+
+def test_boites_reaction():
+    startups = pd.DataFrame(
+        {"statut": ["Inactive", "Active", "Acquired", "Active"], "hn_points": [5, 50, 500, 60]}
+    )
+
+    fig = boites_reaction(startups, "Autant de votes pour les startups qui échoueront")
+
+    # Une boîte par statut, dans l'ordre rachetées, actives, inactives ; axe logarithmique.
+    assert [trace.name for trace in fig.data] == ["Acquired", "Active", "Inactive"]
+    assert fig.data[1].y.tolist() == [50, 60]
+    assert fig.layout.yaxis.type == "log"
 
 
 def test_mots_frequence_association_mots_au_meme_point():

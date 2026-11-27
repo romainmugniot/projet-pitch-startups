@@ -143,8 +143,23 @@ def ratios_par_indicateur(df: pd.DataFrame, colonnes: list[str]) -> pd.DataFrame
 
 
 def reaction_hn_et_destin(df: pd.DataFrame) -> pd.DataFrame:
-    """Lien entre la réaction sur Hacker News (points, commentaires) et le destin de la startup."""
-    raise NotImplementedError
+    """Réaction sur Hacker News (points, commentaires) selon le destin de la startup.
+
+    Une ligne par statut (rachetées, actives, inactives, puis les autres) : `startups`, puis le
+    premier quartile, la médiane et le troisième quartile des points (`points_q1`,
+    `points_mediane`, `points_q3`) et des commentaires (`commentaires_q1`…). Les quartiles plutôt
+    que la moyenne : quelques posts à plus de 1 000 points tireraient la moyenne vers le haut.
+    """
+    groupes = df.groupby("statut")
+    resultat = groupes.size().to_frame("startups")
+    for colonne, nom in [("hn_points", "points"), ("hn_commentaires", "commentaires")]:
+        resultat[f"{nom}_q1"] = groupes[colonne].quantile(0.25)
+        resultat[f"{nom}_mediane"] = groupes[colonne].median()
+        resultat[f"{nom}_q3"] = groupes[colonne].quantile(0.75)
+    ordre = ["Acquired", "Active", "Inactive"]
+    return resultat.loc[
+        [s for s in ordre if s in resultat.index] + [s for s in resultat.index if s not in ordre]
+    ]
 
 
 def decoupage_temporel(

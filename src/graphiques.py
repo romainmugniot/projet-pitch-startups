@@ -317,3 +317,34 @@ def mots_frequence_association(
         "Nombre de pitchs qui contiennent le mot",
         "Log-odds ratio (> 0 : côté succès)",
     )
+
+
+def boites_reaction(df: pd.DataFrame, titre: str, colonne: str = "hn_points") -> go.Figure:
+    """Boîtes à moustaches des points du post Launch HN (ou de `colonne`) par statut.
+
+    Échelle logarithmique : les points vont de quelques unités à plus de 1 000, et une échelle
+    linéaire écraserait les boîtes. Les inactives sont en rouge, les autres statuts en bleu.
+    """
+    ordre = ["Acquired", "Active", "Inactive"]
+    statuts = [s for s in ordre if s in set(df["statut"])]
+    fig = px.box(
+        df[df["statut"].isin(statuts)],
+        x="statut",
+        y=colonne,
+        color="statut",
+        log_y=True,
+        points="outliers",
+        category_orders={"statut": statuts},
+        color_discrete_map={
+            "Acquired": COULEURS["succes"],
+            "Active": COULEURS["succes"],
+            "Inactive": COULEURS["echec"],
+        },
+    )
+    fig.update_layout(showlegend=False)
+    graduations = [1, 3, 10, 30, 100, 300, 1000, 3000]
+    fig.update_yaxes(
+        tickvals=graduations, ticktext=[f"{g:,}".replace(",", " ") for g in graduations]
+    )
+    noms = {"hn_points": "Points du post Launch HN", "hn_commentaires": "Commentaires du post"}
+    return _mise_en_forme(fig, titre, None, f"{noms.get(colonne, colonne)} (échelle log)")

@@ -9,6 +9,7 @@ from src.analyse import (
     modele_reference,
     modele_texte,
     ratios_par_indicateur,
+    reaction_hn_et_destin,
     taux_echec,
     taux_echec_standardise,
 )
@@ -110,6 +111,24 @@ def test_ratios_par_indicateur(deux_promotions):
     assert ratios.loc["chiffre", "effectif"] == 3
     assert ratios.loc["chiffre", "observes"] == 2
     assert ratios.loc["chiffre", "ratio"] == pytest.approx(2 / 1.25)
+
+
+def test_reaction_hn_et_destin():
+    startups = pd.DataFrame(
+        {
+            "statut": ["Inactive"] * 3 + ["Acquired"] * 2,
+            "hn_points": [10, 20, 30, 100, 200],
+            "hn_commentaires": [1, 2, 3, 4, 5],
+        }
+    )
+
+    reaction = reaction_hn_et_destin(startups)
+
+    assert reaction.index.tolist() == ["Acquired", "Inactive"]
+    assert reaction["startups"].tolist() == [2, 3]
+    assert reaction.loc["Inactive", "points_mediane"] == 20
+    assert reaction.loc["Inactive", "points_q1"] == 15
+    assert reaction.loc["Acquired", "commentaires_q3"] == pytest.approx(4.75)
 
 
 @pytest.fixture
