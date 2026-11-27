@@ -8,6 +8,8 @@ from src.analyse import (
     evaluer,
     modele_reference,
     modele_texte,
+    ratios_par_indicateur,
+    reaction_hn_et_destin,
     taux_echec,
     taux_echec_standardise,
 )
@@ -93,6 +95,40 @@ def test_taux_echec_standardise_intervalle():
     assert ligne["ratio"] == pytest.approx(1)
     assert ligne["ic_bas"] == pytest.approx(0.480, abs=2e-3)
     assert ligne["ic_haut"] == pytest.approx(1.839, abs=2e-3)
+
+
+def test_ratios_par_indicateur(deux_promotions):
+    startups = deux_promotions.assign(
+        chiffre=[1, 1, 0, 0, 1, 0, 0, 0],  # 0/1 accepté comme booléen
+        jamais=False,
+    )
+
+    ratios = ratios_par_indicateur(startups, ["chiffre", "jamais"])
+
+    # Indicateur vrai pour 3 startups (2 de A, 1 de B) : 2 échecs pour 0,5 + 0,5 + 0,25 attendus.
+    # « jamais » n'est vrai pour personne : pas de ligne.
+    assert ratios.index.tolist() == ["chiffre"]
+    assert ratios.loc["chiffre", "effectif"] == 3
+    assert ratios.loc["chiffre", "observes"] == 2
+    assert ratios.loc["chiffre", "ratio"] == pytest.approx(2 / 1.25)
+
+
+def test_reaction_hn_et_destin():
+    startups = pd.DataFrame(
+        {
+            "statut": ["Inactive"] * 3 + ["Acquired"] * 2,
+            "hn_points": [10, 20, 30, 100, 200],
+            "hn_commentaires": [1, 2, 3, 4, 5],
+        }
+    )
+
+    reaction = reaction_hn_et_destin(startups)
+
+    assert reaction.index.tolist() == ["Acquired", "Inactive"]
+    assert reaction["startups"].tolist() == [2, 3]
+    assert reaction.loc["Inactive", "points_mediane"] == 20
+    assert reaction.loc["Inactive", "points_q1"] == 15
+    assert reaction.loc["Acquired", "commentaires_q3"] == pytest.approx(4.75)
 
 
 @pytest.fixture

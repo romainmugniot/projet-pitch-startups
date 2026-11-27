@@ -123,9 +123,43 @@ def taux_echec_standardise(df: pd.DataFrame, par: str, min_effectif: int = 10) -
     return _trier(resultat, "ratio")
 
 
+def ratios_par_indicateur(df: pd.DataFrame, colonnes: list[str]) -> pd.DataFrame:
+    """Échecs observés / attendus à promotion égale pour chaque indicateur booléen de `colonnes`.
+
+    Pour chaque colonne (« le pitch contient un chiffre »…), garde la ligne des startups pour
+    lesquelles l'indicateur est vrai dans `taux_echec_standardise`, sans regrouper les petits
+    effectifs : un indicateur rare garde sa ligne, avec un intervalle large. Une ligne par
+    indicateur, dans l'ordre de `colonnes` ; un indicateur jamais vrai est omis.
+    """
+    lignes = {}
+    for colonne in colonnes:
+        resultat = taux_echec_standardise(
+            df.assign(**{colonne: df[colonne].astype(bool)}), colonne, 1
+        )
+        if True in resultat.index:
+            lignes[colonne] = resultat.loc[True]
+    resultat = pd.DataFrame(lignes).T.rename_axis("indicateur")
+    return resultat.astype({"effectif": int, "observes": int})
+
+
 def reaction_hn_et_destin(df: pd.DataFrame) -> pd.DataFrame:
-    """Lien entre la réaction sur Hacker News (points, commentaires) et le destin de la startup."""
-    raise NotImplementedError
+    """Réaction sur Hacker News (points, commentaires) selon le destin de la startup.
+
+    Une ligne par statut (rachetées, actives, inactives, puis les autres) : `startups`, puis le
+    premier quartile, la médiane et le troisième quartile des points (`points_q1`,
+    `points_mediane`, `points_q3`) et des commentaires (`commentaires_q1`…). Les quartiles plutôt
+    que la moyenne : quelques posts à plus de 1 000 points tireraient la moyenne vers le haut.
+    """
+    groupes = df.groupby("statut")
+    resultat = groupes.size().to_frame("startups")
+    for colonne, nom in [("hn_points", "points"), ("hn_commentaires", "commentaires")]:
+        resultat[f"{nom}_q1"] = groupes[colonne].quantile(0.25)
+        resultat[f"{nom}_mediane"] = groupes[colonne].median()
+        resultat[f"{nom}_q3"] = groupes[colonne].quantile(0.75)
+    ordre = ["Acquired", "Active", "Inactive"]
+    return resultat.loc[
+        [s for s in ordre if s in resultat.index] + [s for s in resultat.index if s not in ordre]
+    ]
 
 
 def decoupage_temporel(
